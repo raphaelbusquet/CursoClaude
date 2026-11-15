@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="description" content="Lista de tarefas do dia a dia">
+  <title>Minhas Tarefas</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✅</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    // Aplica o tema salvo antes da renderização para evitar "flash" de cor.
+    (function () {
+      try {
+        var theme = localStorage.getItem('todo.theme');
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+      } catch (e) { /* storage indisponível */ }
+    })();
+  </script>
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <div>
+        <p class="eyebrow" id="today"></p>
+        <h1 id="greeting">Minhas Tarefas</h1>
+      </div>
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </header>
+
+    <section class="card progress-card" aria-label="Progresso do dia">
+      <div class="progress-info">
+        <span id="progress-text">Nenhuma tarefa ainda</span>
+        <strong id="progress-percent">0%</strong>
+      </div>
+      <div class="progress-bar" id="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Tarefas concluídas">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </section>
+
+    <form class="card task-form" id="task-form" autocomplete="off">
+      <label class="sr-only" for="task-input">Nova tarefa</label>
+      <input id="task-input" class="task-input" type="text" placeholder="O que você precisa fazer hoje?" maxlength="200" required>
+      <div class="form-row">
+        <label class="field">
+          <span class="field-label">Prioridade</span>
+          <select id="task-priority">
+            <option value="baixa">Baixa</option>
+            <option value="media" selected>Média</option>
+            <option value="alta">Alta</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-label">Prazo</span>
+          <input id="task-due" type="date">
+        </label>
+        <button class="btn-primary" type="submit">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Adicionar
+        </button>
+      </div>
+    </form>
+
+    <section class="toolbar" aria-label="Filtros">
+      <div class="filters" role="group" aria-label="Filtrar tarefas">
+        <button class="chip is-active" type="button" data-filter="all" aria-pressed="true">Todas <span class="chip-count" id="count-all">0</span></button>
+        <button class="chip" type="button" data-filter="active" aria-pressed="false">Pendentes <span class="chip-count" id="count-active">0</span></button>
+        <button class="chip" type="button" data-filter="done" aria-pressed="false">Concluídas <span class="chip-count" id="count-done">0</span></button>
+      </div>
+      <div class="toolbar-right">
+        <label class="search">
+          <span class="sr-only">Buscar tarefas</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="search" type="search" placeholder="Buscar…">
+        </label>
+        <label>
+          <span class="sr-only">Ordenar por</span>
+          <select id="sort">
+            <option value="created">Mais recentes</option>
+            <option value="due">Prazo</option>
+            <option value="priority">Prioridade</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <ul class="task-list" id="task-list"></ul>
+
+    <div class="empty" id="empty-state" hidden>
+      <div class="empty-icon" aria-hidden="true">📝</div>
+      <p id="empty-text">Nenhuma tarefa ainda.</p>
+    </div>
+
+    <footer class="app-footer">
+      <span id="remaining" aria-live="polite">0 pendentes</span>
+      <button class="link-btn" id="clear-done" type="button">Limpar concluídas</button>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span id="toast-text"></span>
+    <button type="button" id="toast-undo">Desfazer</button>
+  </div>
+
+  <template id="task-template">
+    <li class="task">
+      <input class="task-check" type="checkbox">
+      <div class="task-body">
+        <span class="task-text"></span>
+        <div class="task-meta">
+          <span class="badge badge-priority"></span>
+          <span class="badge badge-due" hidden></span>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="icon-btn small task-edit" type="button" aria-label="Editar tarefa" title="Editar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <button class="icon-btn small task-delete" type="button" aria-label="Excluir tarefa" title="Excluir">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+        </button>
+      </div>
+    </li>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
